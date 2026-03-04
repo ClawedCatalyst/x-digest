@@ -1,7 +1,5 @@
 package domain
 
-import "time"
-
 // AuthState holds OAuth PKCE state during the callback flow.
 type AuthState struct {
 	State        string `json:"state"`

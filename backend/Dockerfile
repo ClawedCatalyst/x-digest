@@ -1,9 +1,10 @@
 FROM golang:1.22-alpine AS build
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
+
+# Copy module definition and source, then resolve deps (creates go.sum in the image)
+COPY go.mod ./
 COPY . .
-RUN go build -o server ./cmd/api
+RUN go mod tidy && go build -o server ./cmd/api
 
 FROM alpine:3.20
 WORKDIR /app
