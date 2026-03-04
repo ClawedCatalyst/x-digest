@@ -2,9 +2,12 @@ package domain
 
 import "time"
 
-// Digest is the daily digest payload for a user.
+// Digest is the digest payload for a user over a period.
 type Digest struct {
+	// Day is kept for backwards compatibility; for ranged digests use PeriodStart/PeriodEnd.
 	Day         string        `json:"day"`
+	PeriodStart string        `json:"period_start,omitempty"`
+	PeriodEnd   string        `json:"period_end,omitempty"`
 	PostsToday  []Tweet       `json:"posts_today"`
 	Mentions    []Tweet       `json:"mentions_today"`
 	NewLikes    []LikeEvent   `json:"new_likes_today"`

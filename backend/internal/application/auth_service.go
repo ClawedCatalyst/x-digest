@@ -56,33 +56,33 @@ func (s *AuthService) StartAuth(state *domain.AuthState) (authURL string, cookie
 	return authURLParsed.String(), enc, nil
 }
 
-// HandleCallback exchanges the code for tokens, upserts user and tokens, returns session cookie value.
-func (s *AuthService) HandleCallback(ctx context.Context, code, state, encryptedCookie string) (sessionCookie string, err error) {
+// HandleCallback exchanges the code for tokens, upserts user and tokens, returns session cookie value and user ID.
+func (s *AuthService) HandleCallback(ctx context.Context, code, state, encryptedCookie string) (sessionCookie string, userID string, err error) {
 	raw, err := s.crypt.Decrypt(encryptedCookie)
 	if err != nil {
-		return "", fmt.Errorf("bad oauth cookie")
+		return "", "", fmt.Errorf("bad oauth cookie")
 	}
 	var as domain.AuthState
 	if err := json.Unmarshal([]byte(raw), &as); err != nil {
-		return "", fmt.Errorf("bad oauth cookie")
+		return "", "", fmt.Errorf("bad oauth cookie")
 	}
 	if as.State != state {
-		return "", fmt.Errorf("state mismatch")
+		return "", "", fmt.Errorf("state mismatch")
 	}
 
 	tok, err := s.x.ExchangeCode(ctx, code, as.CodeVerifier)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	me, err := s.x.GetMe(ctx, tok.AccessToken)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	userID, err := s.users.Upsert(ctx, me.Data.ID, me.Data.Username)
+	userID, err = s.users.Upsert(ctx, me.Data.ID, me.Data.Username)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	accessEnc, _ := s.crypt.Encrypt(tok.AccessToken)
@@ -92,14 +92,14 @@ func (s *AuthService) HandleCallback(ctx context.Context, code, state, encrypted
 	}
 	expiresAt := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 	if err := s.tok.Upsert(ctx, userID, accessEnc, refreshEnc, expiresAt); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	sessionCookie, err = s.crypt.Encrypt(userID)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return sessionCookie, nil
+	return sessionCookie, userID, nil
 }
 
 // RequireUser decrypts the session cookie and returns the user ID.

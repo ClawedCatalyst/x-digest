@@ -21,7 +21,7 @@ func NewDigestRepo(pool *pgxpool.Pool) *DigestRepo {
 
 // Get returns the digest data for the user and day if present.
 func (r *DigestRepo) Get(ctx context.Context, userID string, day time.Time) ([]byte, bool, error) {
-	q := `select data from daily_digest where user_id = $1 and day = $2`
+	q := `select data from digest where user_id = $1 and day = $2`
 	var data []byte
 	err := r.pool.QueryRow(ctx, q, userID, day).Scan(&data)
 	if err != nil {
@@ -33,7 +33,7 @@ func (r *DigestRepo) Get(ctx context.Context, userID string, day time.Time) ([]b
 // Save upserts the digest JSON for the user and day (overwrites data).
 func (r *DigestRepo) Save(ctx context.Context, userID string, day time.Time, data []byte) error {
 	q := `
-insert into daily_digest (user_id, day, data)
+insert into digest (user_id, day, data)
 values ($1, $2, $3)
 on conflict (user_id, day) do update set data = excluded.data;
 `
@@ -48,11 +48,11 @@ func (r *DigestRepo) PutLikerSnapshot(ctx context.Context, userID string, day ti
 	}
 	b, _ := json.Marshal(snap{IDs: snapshot})
 	q := `
-insert into daily_digest (user_id, day, data)
+insert into digest (user_id, day, data)
 values ($1, $2, jsonb_build_object('like_snapshots', jsonb_build_object($3, $4::jsonb)))
 on conflict (user_id, day) do update
-set data = daily_digest.data || jsonb_build_object('like_snapshots',
-  coalesce(daily_digest.data->'like_snapshots','{}'::jsonb) || jsonb_build_object($3, $4::jsonb)
+set data = digest.data || jsonb_build_object('like_snapshots',
+  coalesce(digest.data->'like_snapshots','{}'::jsonb) || jsonb_build_object($3, $4::jsonb)
 );
 `
 	_, err := r.pool.Exec(ctx, q, userID, day, tweetID, b)
@@ -61,7 +61,7 @@ set data = daily_digest.data || jsonb_build_object('like_snapshots',
 
 // GetLikerSnapshot returns the stored like snapshot for the tweet on the given day.
 func (r *DigestRepo) GetLikerSnapshot(ctx context.Context, userID string, day time.Time, tweetID string) (map[string]domain.UserLite, error) {
-	q := `select data->'like_snapshots'->>$2 from daily_digest where user_id = $1 and day = $3`
+	q := `select data->'like_snapshots'->>$2 from digest where user_id = $1 and day = $3`
 	var raw *string
 	_ = r.pool.QueryRow(ctx, q, userID, tweetID, day).Scan(&raw)
 	if raw == nil || *raw == "" {

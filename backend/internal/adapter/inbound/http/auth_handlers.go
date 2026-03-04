@@ -1,6 +1,8 @@
 package http
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -48,11 +50,18 @@ func (s *Server) HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	encryptedCookie, _ := url.QueryUnescape(c.Value)
 
-	sessionCookie, err := s.auth.HandleCallback(r.Context(), code, state, encryptedCookie)
+	sessionCookie, userID, err := s.auth.HandleCallback(r.Context(), code, state, encryptedCookie)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	// Kick off background backfill of recent digests for this user (last 2 months).
+	go func(userID string) {
+		end := time.Now().UTC().Truncate(24 * time.Hour)
+		start := end.AddDate(0, -2, 0)
+		_ = s.digest.BackfillRange(context.Background(), userID, start, end)
+	}(userID)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "sid",

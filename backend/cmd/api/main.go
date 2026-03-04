@@ -68,7 +68,9 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	r.Get("/auth/x/start", server.HandleAuthStart)
 	r.Get("/auth/x/callback", server.HandleAuthCallback)
+	r.Get("/digest", server.HandleGetDigestPeriod)
 	r.Get("/digest/today", server.HandleGetDigestToday)
+	r.Post("/jobs/digest", server.HandleBuildDigestPeriod)
 	r.Post("/jobs/digest/today", server.HandleBuildDigestToday)
 
 	srv := &http.Server{

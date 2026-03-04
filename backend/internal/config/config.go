@@ -32,7 +32,7 @@ func Load() (*Config, error) {
 		AppBaseURL:      firstNonEmpty(get("APP_BASE_URL"), "http://localhost:8080"),
 		FrontendBaseURL: firstNonEmpty(get("FRONTEND_BASE_URL"), "http://localhost:3000"),
 
-		XClientID:     get("X_CLIENT_ID"),
+		XClientID:    get("X_CLIENT_ID"),
 		XClientSecret: get("X_CLIENT_SECRET"),
 		XRedirectURI:  get("X_REDIRECT_URI"),
 		XScopes:       firstNonEmpty(get("X_SCOPES"), "tweet.read users.read like.read offline.access"),

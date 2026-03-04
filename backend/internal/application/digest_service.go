@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"xdigest/internal/domain"
@@ -33,6 +34,9 @@ func (s *DigestService) GetDigest(ctx context.Context, userID string, day time.T
 func (s *DigestService) BuildDigest(ctx context.Context, userID string, day time.Time) error {
 	accessEnc, refreshEnc, exp, xUserID, err := s.tok.GetByUserID(ctx, userID)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return fmt.Errorf("no X tokens for this account; please log in again with X")
+		}
 		return err
 	}
 	accessToken, err := s.crypt.Decrypt(accessEnc)
@@ -174,6 +178,8 @@ func (s *DigestService) BuildDigest(ctx context.Context, userID string, day time
 
 	d := domain.Digest{
 		Day:         day.Format("2006-01-02"),
+		PeriodStart: day.Format("2006-01-02"),
+		PeriodEnd:   day.Format("2006-01-02"),
 		PostsToday:  posts,
 		Mentions:    mentions,
 		NewLikes:    newLikes,
@@ -182,4 +188,14 @@ func (s *DigestService) BuildDigest(ctx context.Context, userID string, day time
 	}
 	b, _ := json.Marshal(d)
 	return s.digest.Save(ctx, userID, day, b)
+}
+
+// BackfillRange builds digests for all days in [start, end].
+func (s *DigestService) BackfillRange(ctx context.Context, userID string, start, end time.Time) error {
+	for d := start; !d.After(end); d = d.Add(24 * time.Hour) {
+		if err := s.BuildDigest(ctx, userID, d); err != nil {
+			return err
+		}
+	}
+	return nil
 }
