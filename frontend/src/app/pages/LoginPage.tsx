@@ -3,7 +3,7 @@ import { Twitter, Shield } from "lucide-react";
 export default function LoginPage() {
   const handleLogin = () => {
     const backendBaseUrl =
-      import.meta.env.VITE_BACKEND_URL ?? "https://699e-2405-201-6007-80b6-d8d9-b4dd-6e34-6512.ngrok-free.app";
+      import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8080";
     window.location.href = `${backendBaseUrl}/auth/x/start`;
   };
 
